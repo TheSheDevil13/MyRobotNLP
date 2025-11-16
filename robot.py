@@ -19,7 +19,7 @@ genai.configure(api_key=API_KEY)
 
 # This is your robot's "memory"
 robot_memory = {
-    "user_name": "Ava", # Let's set a default name
+    "user_name": "Mymuna", 
     "current_lesson": "Colors",
     "last_quiz_score": 0
 }
