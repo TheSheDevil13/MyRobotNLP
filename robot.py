@@ -42,7 +42,6 @@ print("Loading Bangla AI model... (This may take a minute)")
 stt = Speech2Text("base")
 print("Bangla model loaded.")
 
-# === CODE CHANGE 1: CONFIGURE THE MODEL AND CHAT ===
 # We pass the personality prompt in when we create the model
 model = genai.GenerativeModel(
     'gemini-2.5-flash',
@@ -50,7 +49,6 @@ model = genai.GenerativeModel(
 )
 chat = model.start_chat(history=[]) # Start a chat session to remember
 print("Robot is ready!")
-# === END OF CODE CHANGE 1 ===
 
 
 # --- 2. THE "MOUTH" (Text-to-Speech) ---
@@ -124,7 +122,6 @@ if __name__ == "__main__":
             speak("Okay, I will now speak in English.", lang='en')
             continue
 
-        # === CODE CHANGE 2: USE CHAT.SEND_MESSAGE ===
         # This sends ONLY the user's text. The AI remembers
         # its personality and the chat history all by itself.
         try:
@@ -133,4 +130,3 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"API Error: {e}")
             speak("Oops, I'm having a little trouble thinking right now.", lang=current_language)
-        # === END OF CODE CHANGE 2 ===
