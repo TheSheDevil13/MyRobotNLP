@@ -1,0 +1,160 @@
+import google.generativeai as genai
+import speech_recognition as sr
+from gtts import gTTS
+from playsound3 import playsound
+import os
+import time
+from dotenv import load_dotenv
+from groq import Groq # Import the new Groq library
+
+# --- 1. SETUP: Load API Keys and Models ---
+
+load_dotenv()
+
+# 1.1 Load Gemini API (The Brain)
+GEMINI_KEY = os.getenv("GEMINI_API_KEY")
+if not GEMINI_KEY:
+    raise ValueError("GEMINI_API_KEY not found. Check your .env file.")
+genai.configure(api_key=GEMINI_KEY)
+
+# 1.2 Load Groq API (The Bangla Ears)
+GROQ_KEY = os.getenv("GROQ_API_KEY")
+if not GROQ_KEY:
+    print("⚠️ WARNING: GROQ_API_KEY not found. Bangla speech will not work.")
+
+# Initialize Groq Client
+groq_client = Groq(api_key=GROQ_KEY)
+
+# Robot Memory & Personality
+robot_memory = {
+    "user_name": "Mymuna", 
+    "current_lesson": "Colors",
+    "last_quiz_score": 0
+}
+
+robot_personality = f"""
+You are a friendly and encouraging robot tutor.
+Your user is a primary learner named {robot_memory['user_name']}.
+Keep your answers short, simple, and very positive.
+
+DO NOT use emojis or describe actions (e.g., *smiles*).
+You have already greeted the user, so DO NOT greet them again.
+Just answer their questions directly.
+"""
+
+# Initialize Gemini Chat
+model = genai.GenerativeModel('gemini-2.5-flash', system_instruction=robot_personality)
+chat = model.start_chat(history=[]) 
+
+# Initialize Speech Recognizer (for recording)
+r = sr.Recognizer()
+
+print("✅ Robot is ready! (English + Groq Bangla)")
+
+
+# --- 2. THE "MOUTH" (Text-to-Speech) ---
+
+def speak(text, lang='en'):
+    try:
+        print(f"🤖 Robot: {text}")
+        tts = gTTS(text=text, lang=lang)
+        filename = "robot_speech.mp3"
+        tts.save(filename)
+        playsound(filename)
+        time.sleep(0.5)
+        os.remove(filename)
+    except Exception as e:
+        print(f"Error in speaking: {e}")
+
+# --- 3. THE "EARS" (Hybrid Listener) ---
+
+def listen_and_recognize(language="en"):
+    """
+    Hybrid Listener:
+    - English -> Uses Google (Fast, Standard)
+    - Bangla  -> Uses Groq Whisper V3 (Super Accurate)
+    """
+    with sr.Microphone() as source:
+        print(f"\n🎤 Listening ({language})...")
+        r.adjust_for_ambient_noise(source, duration=0.5)
+        
+        try:
+            # 1. Record the Audio
+            # We use a timeout so it doesn't hang forever
+            audio = r.listen(source, timeout=5, phrase_time_limit=10)
+            
+            # === A. IF BANGLA: USE GROQ (WHISPER) ===
+            if language == "bn":
+                print("Uploading to Groq (Whisper V3)...")
+                
+                # Save to temp file (Groq needs a file)
+                temp_file = "temp_command.wav"
+                with open(temp_file, "wb") as f:
+                    f.write(audio.get_wav_data())
+                
+                # Send to Groq API
+                with open(temp_file, "rb") as file:
+                    transcription = groq_client.audio.transcriptions.create(
+                        file=(temp_file, file.read()),
+                        model="whisper-large-v3", # The Smartest Model
+                        response_format="text",
+                        language="bn"
+                    )
+                
+                # Cleanup temp file
+                if os.path.exists(temp_file):
+                    os.remove(temp_file)
+                    
+                print(f"You (Groq): {transcription}")
+                return transcription.lower().strip()
+
+            # === B. IF ENGLISH: USE GOOGLE (STANDARD) ===
+            else:
+                text = r.recognize_google(audio, language="en-US")
+                print(f"You (Google): {text}")
+                return text.lower()
+
+        except sr.WaitTimeoutError:
+            return "" # Just ignore silence
+        except Exception as e:
+            print(f"👂 didn't catch that: {e}")
+            return ""
+
+# --- 4. THE MAIN LOOP ---
+
+if __name__ == "__main__":
+    
+    current_language = 'en'
+    
+    # Greeting
+    speak(f"Hello {robot_memory['user_name']}, I am ready.", lang='en')
+    
+    while True:
+        user_input = listen_and_recognize(language=current_language)
+        
+        if not user_input:
+            continue
+
+        # Commands
+        if "goodbye" in user_input:
+            speak("Goodbye!", lang=current_language)
+            break
+        
+        if "speak in bangla" in user_input or "bangla te bolo" in user_input:
+            current_language = 'bn'
+            speak("OK, Bangla mode on.", lang='en')
+            speak("আমি এখন বাংলায় শুনছি।", lang='bn')
+            continue
+            
+        if "speak in english" in user_input or "english a bolo" in user_input:
+            current_language = 'en'
+            speak("OK, English mode on.", lang='bn')
+            continue
+
+        # Send to AI
+        try:
+            response = chat.send_message(user_input)
+            speak(response.text, lang=current_language)
+        except Exception as e:
+            speak("Oops, my brain hurts.", lang=current_language)
+            print(f"API Error: {e}")
