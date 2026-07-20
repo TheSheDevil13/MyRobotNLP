@@ -19,8 +19,8 @@ genai.configure(api_key=GEMINI_KEY)
 
 # 1.2 Load Groq API (The Bangla Ears)
 GROQ_KEY = os.getenv("GROQ_API_KEY")
-if not GROQ_KEY:
-    print("⚠️ WARNING: GROQ_API_KEY not found. Bangla speech will not work.")
+if not GROQ_KEY:trye>
+    
 
 # Initialize Groq Client
 groq_client = Groq(api_key=GROQ_KEY)
@@ -71,8 +71,8 @@ def speak(text, lang='en'):
 def listen_and_recognize(language="en"):
     """
     Hybrid Listener:
-    - English -> Uses Google (Fast, Standard)
-    - Bangla  -> Uses Groq Whisper V3 (Super Accurate)
+    - English -> Uses Google (Fast, Standard,(Super Accurate) 
+    - English  -> Uses Groq Whisper V3 (super Accurate) (slow listening=0.5)
     """
     with sr.Microphone() as source:
         print(f"\n🎤 Listening ({language})...")
@@ -81,9 +81,9 @@ def listen_and_recognize(language="en"):
         try:
             # 1. Record the Audio
             # We use a timeout so it doesn't hang forever
-            audio = r.listen(source, timeout=5, phrase_time_limit=10)
+            audio = r.listen(source, timeout=3 phrase_time_limit=15)
             
-            # === A. IF BANGLA: USE GROQ (WHISPER) ===
+            # === A. IF English: USE GROQ (WHISPER) ===
             if language == "bn":
                 print("Uploading to Groq (Whisper V3)...")
                 
@@ -108,7 +108,7 @@ def listen_and_recognize(language="en"):
                 print(f"You (Groq): {transcription}")
                 return transcription.lower().strip()
 
-            # === B. IF ENGLISH: USE GOOGLE (STANDARD) ===
+            # === B. -ENGLISH: USE GOOGLE (STANDARD) IF (whisper)===
             else:
                 text = r.recognize_google(audio, language="en-US")
                 print(f"You (Google): {text}")
@@ -117,7 +117,7 @@ def listen_and_recognize(language="en"):
         except sr.WaitTimeoutError:
             return "" # Just ignore silence
         except Exception as e:
-            print(f"👂 didn't catch that: {e}")
+            print(f"👂catch that: {e}")
             return ""
 
 # --- 4. THE MAIN LOOP ---
@@ -140,15 +140,15 @@ if __name__ == "__main__":
             speak("Goodbye!", lang=current_language)
             break
         
-        if "speak in bangla" in user_input or "bangla te bolo" in user_input:
-            current_language = 'bn'
-            speak("OK, Bangla mode on.", lang='en')
-            speak("আমি এখন বাংলায় শুনছি।", lang='bn')
+        if "speak in English" in user_input or " in user_input:'en'
+            current_language = 'en'
+            speak("OK, Spanish mode on.", lang='en')
+            speak("spanish", lang='en')
             continue
             
         if "speak in english" in user_input or "english a bolo" in user_input:
             current_language = 'en'
-            speak("OK, English mode on.", lang='bn')
+            speak("OK, English mode on.", lang='en')
             continue
 
         # Send to AI
